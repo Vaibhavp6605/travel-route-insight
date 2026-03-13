@@ -19,10 +19,15 @@ export function useRouteData() {
       const res = await fetch(API_URL);
       if (!res.ok) throw new Error("Failed to fetch route data");
       const data = await res.json();
-      return (Array.isArray(data) ? data : data.data ?? data.records ?? []).map((r: any) => ({
-        ...r,
-        distance_km: Number(r.distance_km) || 0,
-        travel_time_minutes: Number(r.travel_time_minutes) || 0,
+      const raw = Array.isArray(data) ? data : data.data ?? data.records ?? [];
+      return raw.map((r: any) => ({
+        start_location: r.start_location ?? r.startArea ?? "",
+        end_location: r.end_location ?? r.endArea ?? "",
+        distance_km: Number(r.distance_km ?? r.distanceKm) || 0,
+        travel_time_minutes: Number(r.travel_time_minutes ?? r.travelTimeMinutes) || 0,
+        weather: r.weather ?? r.weatherCondition ?? "",
+        day_type: r.day_type ?? r.dayOfWeek ?? "",
+        timestamp: r.timestamp ?? r.timeOfDay ?? "",
       }));
     },
     staleTime: 60_000,
