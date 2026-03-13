@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Calculator, MapPin, Navigation } from "lucide-react";
-import { RouteRecord } from "@/hooks/useRouteData";
+import { RouteRecord, getUniqueValues } from "@/hooks/useRouteData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 const API_URL = "https://api.sheetninja.io/3a8d841ff1944bf293a902ff958caf51/delhiTrafficSet/sheet1";
@@ -17,16 +17,19 @@ export default function RouteCalculator({ data }: RouteCalculatorProps) {
   const [result, setResult] = useState<{ distance: number; time: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const starts = useMemo(() => getUniqueValues(data, "start_location"), [data]);
+  const ends = useMemo(() => getUniqueValues(data, "end_location"), [data]);
+
   const calculate = async () => {
-    if (!start.trim() || !end.trim()) {
-      toast.error("Please enter both start and destination");
+    if (!start || !end) {
+      toast.error("Please select both start and destination");
       return;
     }
 
     const matches = data.filter(
       (r) =>
-        r.start_location.toLowerCase().includes(start.toLowerCase()) &&
-        r.end_location.toLowerCase().includes(end.toLowerCase())
+        r.start_location.toLowerCase() === start.toLowerCase() &&
+        r.end_location.toLowerCase() === end.toLowerCase()
     );
 
     let distance: number;
@@ -69,22 +72,30 @@ export default function RouteCalculator({ data }: RouteCalculatorProps) {
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Start Location"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-            className="pl-9 bg-background"
-          />
+          <Select value={start} onValueChange={setStart}>
+            <SelectTrigger className="bg-background">
+              <MapPin className="w-4 h-4 text-muted-foreground mr-2 shrink-0" />
+              <SelectValue placeholder="Start Location" />
+            </SelectTrigger>
+            <SelectContent>
+              {starts.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="relative flex-1">
-          <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Destination"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            className="pl-9 bg-background"
-          />
+          <Select value={end} onValueChange={setEnd}>
+            <SelectTrigger className="bg-background">
+              <Navigation className="w-4 h-4 text-muted-foreground mr-2 shrink-0" />
+              <SelectValue placeholder="Destination" />
+            </SelectTrigger>
+            <SelectContent>
+              {ends.map((e) => (
+                <SelectItem key={e} value={e}>{e}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Button onClick={calculate} disabled={loading} className="shrink-0">
           Calculate Route
