@@ -50,18 +50,20 @@ export default function InsightCharts({ data }: Props) {
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 5);
 
-  // Busy travel times (by hour)
-  const hourCounts: Record<number, number> = {};
+  // Busy travel times (by time of day period)
+  const periodCounts: Record<string, number> = {};
   data.forEach((r) => {
-    try {
-      const h = new Date(r.timestamp).getHours();
-      if (!isNaN(h)) hourCounts[h] = (hourCounts[h] || 0) + 1;
-    } catch { /* skip */ }
+    const period = r.timestamp || "Unknown";
+    periodCounts[period] = (periodCounts[period] || 0) + 1;
   });
-  const busyTimes = Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i}:00`,
-    trips: hourCounts[i] || 0,
-  }));
+  const periodOrder = ["Morning Peak", "Afternoon", "Evening Peak", "Night"];
+  const busyTimes = Object.entries(periodCounts)
+    .sort((a, b) => {
+      const ai = periodOrder.indexOf(a[0]);
+      const bi = periodOrder.indexOf(b[0]);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    })
+    .map(([period, trips]) => ({ hour: period, trips }));
 
   // Weather impact
   const weatherTime: Record<string, { sum: number; count: number }> = {};
@@ -75,17 +77,15 @@ export default function InsightCharts({ data }: Props) {
     avg: Math.round(v.sum / v.count),
   }));
 
-  // Trip volume over time
-  const dateCounts: Record<string, number> = {};
+  // Trip volume by day type and weather
+  const comboCount: Record<string, number> = {};
   data.forEach((r) => {
-    try {
-      const d = new Date(r.timestamp).toISOString().split("T")[0];
-      dateCounts[d] = (dateCounts[d] || 0) + 1;
-    } catch { /* skip */ }
+    const key = `${r.day_type} - ${r.weather}`;
+    comboCount[key] = (comboCount[key] || 0) + 1;
   });
-  const tripVolume = Object.entries(dateCounts)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, trips]) => ({ date, trips }));
+  const tripVolume = Object.entries(comboCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, trips]) => ({ date: label, trips }));
 
   // Distance distribution
   const distBins = [
@@ -131,7 +131,7 @@ export default function InsightCharts({ data }: Props) {
 
       {/* Busy Travel Times */}
       <div className="chart-container">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Busy Travel Times</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Busy Travel Periods</h3>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={busyTimes}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,13%,91%)" />
