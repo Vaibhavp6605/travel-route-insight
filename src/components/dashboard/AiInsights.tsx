@@ -52,17 +52,15 @@ export default function AiInsights({ data }: Props) {
     );
   }
 
-  // Peak hour
-  const hourCounts: Record<number, number> = {};
+  // Peak travel period
+  const periodCounts: Record<string, number> = {};
   data.forEach((r) => {
-    try {
-      const h = new Date(r.timestamp).getHours();
-      if (!isNaN(h)) hourCounts[h] = (hourCounts[h] || 0) + 1;
-    } catch { /* skip */ }
+    const period = r.timestamp || "Unknown";
+    periodCounts[period] = (periodCounts[period] || 0) + 1;
   });
-  const peakHour = Object.entries(hourCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
-  if (peakHour) {
-    insights.push(`Peak travel hour is ${peakHour[0]}:00 with ${peakHour[1]} trips recorded.`);
+  const peakPeriod = Object.entries(periodCounts).sort((a, b) => b[1] - a[1])[0];
+  if (peakPeriod) {
+    insights.push(`Peak travel period is "${peakPeriod[0]}" with ${peakPeriod[1]} trips recorded.`);
   }
 
   return (
