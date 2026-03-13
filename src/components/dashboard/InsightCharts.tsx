@@ -131,7 +131,7 @@ export default function InsightCharts({ data }: Props) {
 
       {/* Busy Travel Times */}
       <div className="chart-container">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Busy Travel Times</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-3">Busy Travel Periods</h3>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={busyTimes}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,13%,91%)" />
