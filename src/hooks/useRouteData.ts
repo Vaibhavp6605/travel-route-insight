@@ -35,7 +35,7 @@ async function fetchData(): Promise<RouteRecord[]> {
 export function useRouteData() {
   return useQuery<RouteRecord[]>({
     queryKey: ["route-data"],
-    queryFn: fetchAllPages,
+    queryFn: fetchData,
     staleTime: 60_000,
   });
 }
