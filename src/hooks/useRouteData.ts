@@ -10,8 +10,7 @@ export interface RouteRecord {
   timestamp: string;
 }
 
-const API_BASE = "https://api.sheetninja.com/v1/delhiTraffic";
-const LIMIT = 100;
+const API_URL = "https://api.sheetninja.io/3a8d841ff1944bf293a902ff958caf51/delhiTrafficSet/sheet1";
 
 function mapRecord(r: any): RouteRecord {
   return {
@@ -25,32 +24,18 @@ function mapRecord(r: any): RouteRecord {
   };
 }
 
-async function fetchAllPages(): Promise<RouteRecord[]> {
-  let finalDataset: RouteRecord[] = [];
-  let offset = 0;
-  let isEndOfData = false;
-
-  while (!isEndOfData) {
-    const res = await fetch(`${API_BASE}?limit=${LIMIT}&offset=${offset}`);
-    if (!res.ok) throw new Error("Failed to fetch route data");
-    const result = await res.json();
-    const batch = Array.isArray(result) ? result : result.data ?? result.records ?? [];
-    finalDataset = [...finalDataset, ...batch.map(mapRecord)];
-
-    if (batch.length === LIMIT) {
-      offset += LIMIT;
-    } else {
-      isEndOfData = true;
-    }
-  }
-
-  return finalDataset;
+async function fetchData(): Promise<RouteRecord[]> {
+  const res = await fetch(API_URL);
+  if (!res.ok) throw new Error("Failed to fetch route data");
+  const data = await res.json();
+  const raw = Array.isArray(data) ? data : data.data ?? data.records ?? [];
+  return raw.map(mapRecord);
 }
 
 export function useRouteData() {
   return useQuery<RouteRecord[]>({
     queryKey: ["route-data"],
-    queryFn: fetchAllPages,
+    queryFn: fetchData,
     staleTime: 60_000,
   });
 }
