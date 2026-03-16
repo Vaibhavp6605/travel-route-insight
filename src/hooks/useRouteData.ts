@@ -10,26 +10,47 @@ export interface RouteRecord {
   timestamp: string;
 }
 
-const API_URL = "https://api.sheetninja.io/3a8d841ff1944bf293a902ff958caf51/delhiTrafficSet/sheet1";
+const API_BASE = "https://api.sheetninja.com/v1/delhiTraffic";
+const LIMIT = 100;
+
+function mapRecord(r: any): RouteRecord {
+  return {
+    start_location: r.start_location ?? r.startArea ?? "",
+    end_location: r.end_location ?? r.endArea ?? "",
+    distance_km: Number(r.distance_km ?? r.distanceKm) || 0,
+    travel_time_minutes: Number(r.travel_time_minutes ?? r.travelTimeMinutes) || 0,
+    weather: r.weather ?? r.weatherCondition ?? "",
+    day_type: r.day_type ?? r.dayOfWeek ?? "",
+    timestamp: r.timestamp ?? r.timeOfDay ?? "",
+  };
+}
+
+async function fetchAllPages(): Promise<RouteRecord[]> {
+  let finalDataset: RouteRecord[] = [];
+  let offset = 0;
+  let isEndOfData = false;
+
+  while (!isEndOfData) {
+    const res = await fetch(`${API_BASE}?limit=${LIMIT}&offset=${offset}`);
+    if (!res.ok) throw new Error("Failed to fetch route data");
+    const result = await res.json();
+    const batch = Array.isArray(result) ? result : result.data ?? result.records ?? [];
+    finalDataset = [...finalDataset, ...batch.map(mapRecord)];
+
+    if (batch.length === LIMIT) {
+      offset += LIMIT;
+    } else {
+      isEndOfData = true;
+    }
+  }
+
+  return finalDataset;
+}
 
 export function useRouteData() {
   return useQuery<RouteRecord[]>({
     queryKey: ["route-data"],
-    queryFn: async () => {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error("Failed to fetch route data");
-      const data = await res.json();
-      const raw = Array.isArray(data) ? data : data.data ?? data.records ?? [];
-      return raw.map((r: any) => ({
-        start_location: r.start_location ?? r.startArea ?? "",
-        end_location: r.end_location ?? r.endArea ?? "",
-        distance_km: Number(r.distance_km ?? r.distanceKm) || 0,
-        travel_time_minutes: Number(r.travel_time_minutes ?? r.travelTimeMinutes) || 0,
-        weather: r.weather ?? r.weatherCondition ?? "",
-        day_type: r.day_type ?? r.dayOfWeek ?? "",
-        timestamp: r.timestamp ?? r.timeOfDay ?? "",
-      }));
-    },
+    queryFn: fetchAllPages,
     staleTime: 60_000,
   });
 }
