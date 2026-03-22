@@ -48,7 +48,7 @@ const Index = () => {
       <div className="max-w-[1400px] mx-auto px-3 sm:px-4 pb-6 sm:pb-10">
         <DashboardHeader />
 
-        <div className="space-y-5">
+        <div className="space-y-3 sm:space-y-5">
           <FilterBar
             starts={starts}
             ends={ends}
