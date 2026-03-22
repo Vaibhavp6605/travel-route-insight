@@ -63,6 +63,8 @@ const Index = () => {
 
           <RouteCalculator data={allData} />
 
+          <RecordManager data={allData} />
+
           <InsightCharts data={filtered} />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
