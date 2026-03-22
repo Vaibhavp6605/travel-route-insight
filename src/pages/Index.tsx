@@ -64,7 +64,7 @@ const Index = () => {
 
           <InsightCharts data={filtered} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             <PredictionModule data={allData} starts={starts} ends={ends} weathers={weathers} dayTypes={dayTypes} />
             <AiInsights data={filtered} />
           </div>
