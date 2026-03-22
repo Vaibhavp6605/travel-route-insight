@@ -45,7 +45,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-[1400px] mx-auto px-4 pb-10">
+      <div className="max-w-[1400px] mx-auto px-3 sm:px-4 pb-6 sm:pb-10">
         <DashboardHeader />
 
         <div className="space-y-5">
