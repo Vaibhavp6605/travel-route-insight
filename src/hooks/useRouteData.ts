@@ -36,37 +36,8 @@ export function useRouteData() {
   return useQuery<RouteRecord[]>({
     queryKey: ["route-data"],
     queryFn: fetchData,
-    staleTime: 10_000,
-    refetchInterval: 10_000,
+    staleTime: 60_000,
   });
-}
-
-export async function addRecord(record: Omit<RouteRecord, "timestamp">) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...record, timestamp: new Date().toISOString() }),
-  });
-  if (!res.ok) throw new Error("Failed to add record");
-  return res.json();
-}
-
-export async function updateRecord(rowIndex: number, record: Partial<RouteRecord>) {
-  const res = await fetch(`${API_URL}/${rowIndex}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(record),
-  });
-  if (!res.ok) throw new Error("Failed to update record");
-  return res.json();
-}
-
-export async function deleteRecord(rowIndex: number) {
-  const res = await fetch(`${API_URL}/${rowIndex}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Failed to delete record");
-  return res.json();
 }
 
 export function filterData(
