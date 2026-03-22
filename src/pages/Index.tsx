@@ -5,7 +5,6 @@ import FilterBar from "@/components/dashboard/FilterBar";
 import KpiCards from "@/components/dashboard/KpiCards";
 import RouteCalculator from "@/components/dashboard/RouteCalculator";
 import InsightCharts from "@/components/dashboard/InsightCharts";
-import RecordManager from "@/components/dashboard/RecordManager";
 import DataTable from "@/components/dashboard/DataTable";
 import PredictionModule from "@/components/dashboard/PredictionModule";
 import AiInsights from "@/components/dashboard/AiInsights";
@@ -62,8 +61,6 @@ const Index = () => {
           <KpiCards data={filtered} />
 
           <RouteCalculator data={allData} />
-
-          <RecordManager data={allData} />
 
           <InsightCharts data={filtered} />
 
