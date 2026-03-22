@@ -76,7 +76,7 @@ export default function PredictionModule({ data, starts, ends, weathers, dayType
         <Brain className="w-4 h-4 text-kpi-purple" />
         <h3 className="font-semibold text-foreground">Travel Time Prediction</h3>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 mb-4">
         <Select value={start} onValueChange={setStart}>
           <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Start" /></SelectTrigger>
           <SelectContent>{starts.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
