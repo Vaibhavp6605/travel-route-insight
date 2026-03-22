@@ -51,9 +51,9 @@ export default function DataTable({ data }: Props) {
 
   return (
     <div className="chart-container">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-4">
         <h3 className="text-sm font-semibold text-foreground">Dataset</h3>
-        <div className="relative w-64">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search routes..."
@@ -63,22 +63,22 @@ export default function DataTable({ data }: Props) {
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto -mx-5 px-5">
         <Table>
           <TableHeader>
             <TableRow>
               {([
                 ["start_location", "Start"],
                 ["end_location", "End"],
-                ["distance_km", "Distance (km)"],
+                ["distance_km", "Dist (km)"],
                 ["travel_time_minutes", "Time (min)"],
                 ["weather", "Weather"],
-                ["day_type", "Day Type"],
-                ["timestamp", "Timestamp"],
+                ["day_type", "Day"],
+                ["timestamp", "Time"],
               ] as [SortKey, string][]).map(([key, label]) => (
                 <TableHead
                   key={key}
-                  className="cursor-pointer select-none text-xs"
+                  className="cursor-pointer select-none text-xs whitespace-nowrap"
                   onClick={() => toggleSort(key)}
                 >
                   <span className="flex items-center gap-1">
@@ -91,13 +91,13 @@ export default function DataTable({ data }: Props) {
           <TableBody>
             {paged.map((r, i) => (
               <TableRow key={i}>
-                <TableCell className="text-xs">{r.start_location}</TableCell>
-                <TableCell className="text-xs">{r.end_location}</TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{r.start_location}</TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{r.end_location}</TableCell>
                 <TableCell className="text-xs font-mono">{r.distance_km}</TableCell>
                 <TableCell className="text-xs font-mono">{r.travel_time_minutes}</TableCell>
                 <TableCell className="text-xs">{r.weather}</TableCell>
                 <TableCell className="text-xs">{r.day_type}</TableCell>
-                <TableCell className="text-xs font-mono">{r.timestamp}</TableCell>
+                <TableCell className="text-xs font-mono whitespace-nowrap">{r.timestamp}</TableCell>
               </TableRow>
             ))}
           </TableBody>
