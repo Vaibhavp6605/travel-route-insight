@@ -22,13 +22,13 @@ export default function FilterBar({ starts, ends, weathers, dayTypes, filters, o
   };
 
   return (
-    <div className="filter-bar flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mr-2">
+    <div className="filter-bar flex flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground mr-1 sm:mr-2">
         <Filter className="w-4 h-4" />
-        Filters
+        <span className="hidden sm:inline">Filters</span>
       </div>
       <Select value={filters.start ?? "__all__"} onValueChange={(v) => set("start", v)}>
-        <SelectTrigger className="w-[180px] bg-background">
+        <SelectTrigger className="w-[130px] sm:w-[180px] bg-background text-xs sm:text-sm">
           <SelectValue placeholder="Start Area" />
         </SelectTrigger>
         <SelectContent>
@@ -39,7 +39,7 @@ export default function FilterBar({ starts, ends, weathers, dayTypes, filters, o
         </SelectContent>
       </Select>
       <Select value={filters.end ?? "__all__"} onValueChange={(v) => set("end", v)}>
-        <SelectTrigger className="w-[180px] bg-background">
+        <SelectTrigger className="w-[130px] sm:w-[180px] bg-background text-xs sm:text-sm">
           <SelectValue placeholder="End Area" />
         </SelectTrigger>
         <SelectContent>
@@ -50,7 +50,7 @@ export default function FilterBar({ starts, ends, weathers, dayTypes, filters, o
         </SelectContent>
       </Select>
       <Select value={filters.weather ?? "__all__"} onValueChange={(v) => set("weather", v)}>
-        <SelectTrigger className="w-[150px] bg-background">
+        <SelectTrigger className="w-[110px] sm:w-[150px] bg-background text-xs sm:text-sm">
           <SelectValue placeholder="Weather" />
         </SelectTrigger>
         <SelectContent>
@@ -61,7 +61,7 @@ export default function FilterBar({ starts, ends, weathers, dayTypes, filters, o
         </SelectContent>
       </Select>
       <Select value={filters.dayType ?? "__all__"} onValueChange={(v) => set("dayType", v)}>
-        <SelectTrigger className="w-[150px] bg-background">
+        <SelectTrigger className="w-[110px] sm:w-[150px] bg-background text-xs sm:text-sm">
           <SelectValue placeholder="Day Type" />
         </SelectTrigger>
         <SelectContent>

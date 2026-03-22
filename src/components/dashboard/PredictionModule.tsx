@@ -26,34 +26,28 @@ export default function PredictionModule({ data, starts, ends, weathers, dayType
   const [prediction, setPrediction] = useState<number | null>(null);
 
   const predict = () => {
-    // Simple weighted average regression
     let matches = data;
     const weights: { records: RouteRecord[]; weight: number }[] = [];
 
-    // Exact matches get highest weight
     const exact = data.filter(
       (r) => r.start_location === start && r.end_location === end && r.weather === weather && r.day_type === dayType
     );
     if (exact.length) weights.push({ records: exact, weight: 4 });
 
-    // Route + weather
     const routeWeather = data.filter(
       (r) => r.start_location === start && r.end_location === end && r.weather === weather
     );
     if (routeWeather.length) weights.push({ records: routeWeather, weight: 3 });
 
-    // Route only
     const routeOnly = data.filter(
       (r) => r.start_location === start && r.end_location === end
     );
     if (routeOnly.length) weights.push({ records: routeOnly, weight: 2 });
 
-    // Weather + day type fallback
     const weatherDay = data.filter((r) => r.weather === weather && r.day_type === dayType);
     if (weatherDay.length) weights.push({ records: weatherDay, weight: 1 });
 
     if (weights.length === 0) {
-      // Global average
       const avg = matches.reduce((s, r) => s + r.travel_time_minutes, 0) / (matches.length || 1);
       setPrediction(Math.round(avg));
       return;
@@ -74,36 +68,36 @@ export default function PredictionModule({ data, starts, ends, weathers, dayType
     <div className="chart-container">
       <div className="flex items-center gap-2 mb-4">
         <Brain className="w-4 h-4 text-kpi-purple" />
-        <h3 className="font-semibold text-foreground">Travel Time Prediction</h3>
+        <h3 className="font-semibold text-foreground text-sm sm:text-base">Travel Time Prediction</h3>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 mb-4">
         <Select value={start} onValueChange={setStart}>
-          <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Start" /></SelectTrigger>
+          <SelectTrigger className="bg-background text-xs sm:text-sm"><SelectValue placeholder="Start" /></SelectTrigger>
           <SelectContent>{starts.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={end} onValueChange={setEnd}>
-          <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="End" /></SelectTrigger>
+          <SelectTrigger className="bg-background text-xs sm:text-sm"><SelectValue placeholder="End" /></SelectTrigger>
           <SelectContent>{ends.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={weather} onValueChange={setWeather}>
-          <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Weather" /></SelectTrigger>
+          <SelectTrigger className="bg-background text-xs sm:text-sm"><SelectValue placeholder="Weather" /></SelectTrigger>
           <SelectContent>{weathers.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={dayType} onValueChange={setDayType}>
-          <SelectTrigger className="bg-background text-sm"><SelectValue placeholder="Day Type" /></SelectTrigger>
+          <SelectTrigger className="bg-background text-xs sm:text-sm"><SelectValue placeholder="Day Type" /></SelectTrigger>
           <SelectContent>{dayTypes.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
       </div>
-      <div className="flex items-center gap-4">
-        <Button onClick={predict} disabled={!start || !end || !weather || !dayType}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+        <Button onClick={predict} disabled={!start || !end || !weather || !dayType} className="w-full sm:w-auto">
           Predict Travel Time
         </Button>
         {prediction !== null && (
-          <div className="kpi-card flex items-center gap-3 px-6">
+          <div className="kpi-card flex items-center gap-3 px-4 sm:px-6 w-full sm:w-auto">
             <Clock className="w-5 h-5 text-kpi-purple" />
             <div>
               <p className="text-xs text-muted-foreground">Predicted Travel Time</p>
-              <p className="text-2xl font-bold text-foreground">{prediction} min</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground">{prediction} min</p>
             </div>
           </div>
         )}

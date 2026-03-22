@@ -41,12 +41,12 @@ export default function KpiCards({ data }: KpiCardsProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
       {kpis.map((kpi) => (
-        <div key={kpi.label} className="kpi-card flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
-            <span className="text-xs font-medium text-muted-foreground">{kpi.label}</span>
+        <div key={kpi.label} className="kpi-card flex flex-col gap-1.5 sm:gap-2 p-3 sm:p-5">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <kpi.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${kpi.color}`} />
+            <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">{kpi.label}</span>
           </div>
-          <span className={`font-bold ${kpi.small ? "text-sm" : "text-xl"} text-foreground leading-tight`}>
+          <span className={`font-bold ${kpi.small ? "text-xs sm:text-sm" : "text-base sm:text-xl"} text-foreground leading-tight truncate`}>
             {kpi.value}
           </span>
         </div>
