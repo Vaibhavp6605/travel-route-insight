@@ -14,30 +14,31 @@ const API_URL = "https://api.sheetninja.io/3a8d841ff1944bf293a902ff958caf51/delh
 
 function mapRecord(r: any): RouteRecord {
   return {
-    start_location: r.start_location ?? r.startArea ?? "",
-    end_location: r.end_location ?? r.endArea ?? "",
-    distance_km: Number(r.distance_km ?? r.distanceKm) || 0,
-    travel_time_minutes: Number(r.travel_time_minutes ?? r.travelTimeMinutes) || 0,
-    weather: r.weather ?? r.weatherCondition ?? "",
-    day_type: r.day_type ?? r.dayOfWeek ?? "",
-    timestamp: r.timestamp ?? r.timeOfDay ?? "",
+    start_location: r.startArea ?? r.start_location ?? "",
+    end_location: r.endArea ?? r.end_location ?? "",
+    distance_km: Number(r.distanceKm ?? r.distance_km) || 0,
+    travel_time_minutes: Number(r.travelTimeMinutes ?? r.travel_time_minutes) || 0,
+    weather: r.weatherCondition ?? r.weather ?? "",
+    day_type: r.dayOfWeek ?? r.day_type ?? "",
+    timestamp: r.timeOfDay ?? r.timestamp ?? "",
   };
 }
 
 async function fetchData(): Promise<RouteRecord[]> {
   const allRecords: RouteRecord[] = [];
-  let page = 1;
+  let offset = 0;
+  const limit = 100;
 
   while (true) {
-    const res = await fetch(`${API_URL}?page=${page}`);
+    const res = await fetch(`${API_URL}?limit=${limit}&offset=${offset}`);
     if (!res.ok) throw new Error("Failed to fetch route data");
-    const data = await res.json();
-    const raw: any[] = Array.isArray(data) ? data : data.data ?? data.records ?? [];
+    const json = await res.json();
+    const raw: any[] = json.data ?? json.records ?? (Array.isArray(json) ? json : []);
     if (raw.length === 0) break;
     allRecords.push(...raw.map(mapRecord));
-    // If we got fewer than 100, we've reached the last page
-    if (raw.length < 100) break;
-    page++;
+    const meta = json.meta;
+    if (!meta?.has_more) break;
+    offset = meta.next_offset ?? offset + limit;
   }
 
   return allRecords;
