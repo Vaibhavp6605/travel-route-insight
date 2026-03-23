@@ -28,8 +28,9 @@ async function fetchData(): Promise<RouteRecord[]> {
   const allRecords: RouteRecord[] = [];
   let offset = 0;
   const limit = 100;
+  const maxRows = 1000;
 
-  while (true) {
+  while (allRecords.length < maxRows) {
     const res = await fetch(`${API_URL}?limit=${limit}&offset=${offset}`);
     if (!res.ok) throw new Error("Failed to fetch route data");
     const json = await res.json();
