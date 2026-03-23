@@ -25,24 +25,41 @@ function mapRecord(r: any): RouteRecord {
 }
 
 async function fetchData(): Promise<RouteRecord[]> {
-  const allRecords: RouteRecord[] = [];
-  let offset = 0;
   const limit = 100;
   const maxRows = 1000;
 
-  while (allRecords.length < maxRows) {
-    const res = await fetch(`${API_URL}?limit=${limit}&offset=${offset}`);
-    if (!res.ok) throw new Error("Failed to fetch route data");
-    const json = await res.json();
-    const raw: any[] = json.data ?? json.records ?? (Array.isArray(json) ? json : []);
-    if (raw.length === 0) break;
-    allRecords.push(...raw.map(mapRecord));
-    const meta = json.meta;
-    if (!meta?.has_more) break;
-    offset = meta.next_offset ?? offset + limit;
+  const firstRes = await fetch(`${API_URL}?limit=${limit}&offset=0`);
+  if (!firstRes.ok) throw new Error("Failed to fetch route data");
+
+  const firstJson = await firstRes.json();
+  const firstRaw: any[] = firstJson.data ?? firstJson.records ?? (Array.isArray(firstJson) ? firstJson : []);
+  const firstPage = firstRaw.map(mapRecord);
+
+  const firstMeta = firstJson.meta;
+  if (!firstMeta?.has_more || firstPage.length >= maxRows) {
+    return firstPage.slice(0, maxRows);
   }
 
-  return allRecords;
+  const remainingOffsets: number[] = [];
+  for (let offset = limit; offset < maxRows; offset += limit) {
+    remainingOffsets.push(offset);
+  }
+
+  const remainingPages = await Promise.allSettled(
+    remainingOffsets.map(async (offset) => {
+      const res = await fetch(`${API_URL}?limit=${limit}&offset=${offset}`);
+      if (!res.ok) throw new Error(`Failed to fetch route data at offset ${offset}`);
+      const json = await res.json();
+      const raw: any[] = json.data ?? json.records ?? (Array.isArray(json) ? json : []);
+      return raw.map(mapRecord);
+    })
+  );
+
+  const successfulRows = remainingPages.flatMap((result) =>
+    result.status === "fulfilled" ? result.value : []
+  );
+
+  return [...firstPage, ...successfulRows].slice(0, maxRows);
 }
 
 export function useRouteData() {
