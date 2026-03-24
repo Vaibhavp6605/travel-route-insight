@@ -25,11 +25,21 @@ function mapRecord(r: any): RouteRecord {
 }
 
 async function fetchData(): Promise<RouteRecord[]> {
-  const res = await fetch(`${API_URL}?limit=1000`);
-  if (!res.ok) throw new Error("Failed to fetch route data");
-  const json = await res.json();
-  const raw: any[] = json.data ?? json.records ?? (Array.isArray(json) ? json : []);
-  return raw.map(mapRecord);
+  const pageSize = 100;
+  const maxRows = 1000;
+  const offsets = Array.from({ length: maxRows / pageSize }, (_, i) => i * pageSize);
+
+  const pages = await Promise.all(
+    offsets.map(async (offset) => {
+      const res = await fetch(`${API_URL}?limit=${pageSize}&offset=${offset}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      const raw: any[] = json.data ?? json.records ?? (Array.isArray(json) ? json : []);
+      return raw.map(mapRecord);
+    })
+  );
+
+  return pages.flat().slice(0, maxRows);
 }
 
 export function useRouteData() {
