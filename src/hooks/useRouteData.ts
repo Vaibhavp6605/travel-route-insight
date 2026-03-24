@@ -24,22 +24,33 @@ function mapRecord(r: any): RouteRecord {
   };
 }
 
+async function fetchPage(offset: number, pageSize: number, retries = 3): Promise<RouteRecord[]> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetch(`${API_URL}?limit=${pageSize}&offset=${offset}`);
+      if (!res.ok) {
+        if (attempt < retries - 1) { await new Promise(r => setTimeout(r, 500 * (attempt + 1))); continue; }
+        return [];
+      }
+      const json = await res.json();
+      const raw: any[] = json.data ?? json.records ?? (Array.isArray(json) ? json : []);
+      return raw.map(mapRecord);
+    } catch {
+      if (attempt < retries - 1) { await new Promise(r => setTimeout(r, 500 * (attempt + 1))); continue; }
+      return [];
+    }
+  }
+  return [];
+}
+
 async function fetchData(): Promise<RouteRecord[]> {
   const pageSize = 100;
   const maxRows = 1000;
   const offsets = Array.from({ length: maxRows / pageSize }, (_, i) => i * pageSize);
-
-  const pages = await Promise.all(
-    offsets.map(async (offset) => {
-      const res = await fetch(`${API_URL}?limit=${pageSize}&offset=${offset}`);
-      if (!res.ok) return [];
-      const json = await res.json();
-      const raw: any[] = json.data ?? json.records ?? (Array.isArray(json) ? json : []);
-      return raw.map(mapRecord);
-    })
-  );
-
-  return pages.flat().slice(0, maxRows);
+  const pages = await Promise.all(offsets.map((offset) => fetchPage(offset, pageSize)));
+  const result = pages.flat().slice(0, maxRows);
+  console.log(`[RouteData] Loaded ${result.length} rows from ${offsets.length} pages`);
+  return result;
 }
 
 export function useRouteData() {
