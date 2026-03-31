@@ -73,6 +73,8 @@ const Index = () => {
           <DataTable data={filtered} />
         </div>
       </div>
+
+      <RouteMap data={allData} />
     </div>
   );
 };
