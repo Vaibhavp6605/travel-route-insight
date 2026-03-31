@@ -1,0 +1,205 @@
+import { useState, useMemo, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { RouteRecord, getUniqueValues } from "@/hooks/useRouteData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Map, MapPin, Navigation, X } from "lucide-react";
+
+// Fix leaflet default icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
+
+// Known Delhi area coordinates
+const DELHI_COORDS: Record<string, [number, number]> = {
+  "Connaught Place": [28.6315, 76.2195],
+  "Karol Bagh": [28.6519, 76.1903],
+  "Chandni Chowk": [28.6505, 76.2302],
+  "Dwarka": [28.5921, 77.0460],
+  "Saket": [28.5244, 77.2066],
+  "Lajpat Nagar": [28.5700, 77.2373],
+  "Rohini": [28.7495, 77.0565],
+  "Janakpuri": [28.6219, 77.0814],
+  "Nehru Place": [28.5491, 77.2533],
+  "Pitampura": [28.6986, 77.1316],
+  "Vasant Kunj": [28.5195, 77.1581],
+  "Greater Kailash": [28.5485, 77.2432],
+  "Hauz Khas": [28.5494, 77.2001],
+  "Defence Colony": [28.5743, 77.2330],
+  "South Extension": [28.5727, 77.2219],
+  "Rajouri Garden": [28.6488, 77.1183],
+  "Preet Vihar": [28.6420, 77.2946],
+  "Model Town": [28.7160, 77.1912],
+  "Mayur Vihar": [28.6090, 77.2930],
+  "Green Park": [28.5594, 77.2071],
+};
+
+const DELHI_CENTER: [number, number] = [28.6139, 77.2090];
+
+const startIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const endIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+function FitBounds({ start, end }: { start: [number, number] | null; end: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (start && end) {
+      const bounds = L.latLngBounds([start, end]);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (start) {
+      map.setView(start, 13);
+    } else if (end) {
+      map.setView(end, 13);
+    }
+  }, [start, end, map]);
+  return null;
+}
+
+interface RouteMapProps {
+  data: RouteRecord[];
+}
+
+export default function RouteMap({ data }: RouteMapProps) {
+  const [open, setOpen] = useState(false);
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+
+  const starts = useMemo(() => getUniqueValues(data, "start_location"), [data]);
+  const ends = useMemo(() => getUniqueValues(data, "end_location"), [data]);
+
+  const startCoord = start ? DELHI_COORDS[start] ?? null : null;
+  const endCoord = end ? DELHI_COORDS[end] ?? null : null;
+
+  const routeStats = useMemo(() => {
+    if (!start || !end) return null;
+    const matches = data.filter(
+      (r) => r.start_location === start && r.end_location === end
+    );
+    if (matches.length === 0) return null;
+    const avgDist = matches.reduce((s, r) => s + r.distance_km, 0) / matches.length;
+    const avgTime = matches.reduce((s, r) => s + r.travel_time_minutes, 0) / matches.length;
+    return { distance: Math.round(avgDist * 10) / 10, time: Math.round(avgTime), trips: matches.length };
+  }, [data, start, end]);
+
+  if (!open) {
+    return (
+      <Button
+        onClick={() => setOpen(true)}
+        variant="outline"
+        className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg border-primary/30 bg-card hover:bg-primary hover:text-primary-foreground transition-all"
+        size="icon"
+      >
+        <Map className="w-5 h-5" />
+      </Button>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Map className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold text-foreground text-lg">Delhi Route Map</h2>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Route selection */}
+        <div className="flex flex-col sm:flex-row gap-3 p-4 border-b border-border bg-muted/30">
+          <div className="flex-1">
+            <Select value={start} onValueChange={setStart}>
+              <SelectTrigger className="bg-background">
+                <MapPin className="w-4 h-4 text-accent mr-2 shrink-0" />
+                <SelectValue placeholder="Start Location" />
+              </SelectTrigger>
+              <SelectContent>
+                {starts.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Select value={end} onValueChange={setEnd}>
+              <SelectTrigger className="bg-background">
+                <Navigation className="w-4 h-4 text-destructive mr-2 shrink-0" />
+                <SelectValue placeholder="Destination" />
+              </SelectTrigger>
+              <SelectContent>
+                {ends.map((e) => (
+                  <SelectItem key={e} value={e}>{e}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Route info bar */}
+        {routeStats && (
+          <div className="flex gap-4 px-4 py-2 bg-primary/5 border-b border-border text-sm">
+            <span className="text-foreground font-medium">{routeStats.distance} km</span>
+            <span className="text-muted-foreground">•</span>
+            <span className="text-foreground font-medium">~{routeStats.time} min</span>
+            <span className="text-muted-foreground">•</span>
+            <span className="text-muted-foreground">{routeStats.trips} trips recorded</span>
+          </div>
+        )}
+
+        {/* Map */}
+        <div className="flex-1 min-h-[400px]">
+          <MapContainer
+            center={DELHI_CENTER}
+            zoom={11}
+            style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom={true}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <FitBounds start={startCoord} end={endCoord} />
+            {startCoord && (
+              <Marker position={startCoord} icon={startIcon}>
+                <Popup>{start}</Popup>
+              </Marker>
+            )}
+            {endCoord && (
+              <Marker position={endCoord} icon={endIcon}>
+                <Popup>{end}</Popup>
+              </Marker>
+            )}
+            {startCoord && endCoord && (
+              <Polyline
+                positions={[startCoord, endCoord]}
+                pathOptions={{ color: "hsl(220, 90%, 56%)", weight: 4, dashArray: "10, 6" }}
+              />
+            )}
+          </MapContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
