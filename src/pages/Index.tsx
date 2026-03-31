@@ -8,6 +8,7 @@ import InsightCharts from "@/components/dashboard/InsightCharts";
 import DataTable from "@/components/dashboard/DataTable";
 import PredictionModule from "@/components/dashboard/PredictionModule";
 import AiInsights from "@/components/dashboard/AiInsights";
+import RouteMap from "@/components/dashboard/RouteMap";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
