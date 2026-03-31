@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import { useState, useMemo, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { RouteRecord, getUniqueValues } from "@/hooks/useRouteData";
@@ -7,19 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Map, MapPin, Navigation, X } from "lucide-react";
 
-// Fix leaflet default icon issue
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
-
-// Known Delhi area coordinates
 const DELHI_COORDS: Record<string, [number, number]> = {
-  "Connaught Place": [28.6315, 76.2195],
-  "Karol Bagh": [28.6519, 76.1903],
-  "Chandni Chowk": [28.6505, 76.2302],
+  "Connaught Place": [28.6315, 77.2195],
+  "Karol Bagh": [28.6519, 77.1903],
+  "Chandni Chowk": [28.6505, 77.2302],
   "Dwarka": [28.5921, 77.0460],
   "Saket": [28.5244, 77.2066],
   "Lajpat Nagar": [28.5700, 77.2373],
@@ -41,39 +31,6 @@ const DELHI_COORDS: Record<string, [number, number]> = {
 
 const DELHI_CENTER: [number, number] = [28.6139, 77.2090];
 
-const startIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const endIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-function FitBounds({ start, end }: { start: [number, number] | null; end: [number, number] | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (start && end) {
-      const bounds = L.latLngBounds([start, end]);
-      map.fitBounds(bounds, { padding: [50, 50] });
-    } else if (start) {
-      map.setView(start, 13);
-    } else if (end) {
-      map.setView(end, 13);
-    }
-  }, [start, end, map]);
-  return null;
-}
-
 interface RouteMapProps {
   data: RouteRecord[];
 }
@@ -82,6 +39,9 @@ export default function RouteMap({ data }: RouteMapProps) {
   const [open, setOpen] = useState(false);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<L.Layer[]>([]);
 
   const starts = useMemo(() => getUniqueValues(data, "start_location"), [data]);
   const ends = useMemo(() => getUniqueValues(data, "end_location"), [data]);
@@ -91,14 +51,67 @@ export default function RouteMap({ data }: RouteMapProps) {
 
   const routeStats = useMemo(() => {
     if (!start || !end) return null;
-    const matches = data.filter(
-      (r) => r.start_location === start && r.end_location === end
-    );
+    const matches = data.filter(r => r.start_location === start && r.end_location === end);
     if (matches.length === 0) return null;
     const avgDist = matches.reduce((s, r) => s + r.distance_km, 0) / matches.length;
     const avgTime = matches.reduce((s, r) => s + r.travel_time_minutes, 0) / matches.length;
     return { distance: Math.round(avgDist * 10) / 10, time: Math.round(avgTime), trips: matches.length };
   }, [data, start, end]);
+
+  // Initialize map
+  useEffect(() => {
+    if (!open || !mapContainerRef.current || mapRef.current) return;
+
+    const map = L.map(mapContainerRef.current).setView(DELHI_CENTER, 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [open]);
+
+  // Update markers/route
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear previous
+    markersRef.current.forEach(l => map.removeLayer(l));
+    markersRef.current = [];
+
+    const greenIcon = new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+    });
+    const redIcon = new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+    });
+
+    if (startCoord) {
+      const m = L.marker(startCoord, { icon: greenIcon }).addTo(map).bindPopup(start);
+      markersRef.current.push(m);
+    }
+    if (endCoord) {
+      const m = L.marker(endCoord, { icon: redIcon }).addTo(map).bindPopup(end);
+      markersRef.current.push(m);
+    }
+    if (startCoord && endCoord) {
+      const line = L.polyline([startCoord, endCoord], { color: "#3b82f6", weight: 4, dashArray: "10, 6" }).addTo(map);
+      markersRef.current.push(line);
+      map.fitBounds(L.latLngBounds([startCoord, endCoord]), { padding: [50, 50] });
+    } else if (startCoord) {
+      map.setView(startCoord, 13);
+    } else if (endCoord) {
+      map.setView(endCoord, 13);
+    }
+  }, [startCoord, endCoord, start, end]);
 
   if (!open) {
     return (
@@ -116,18 +129,16 @@ export default function RouteMap({ data }: RouteMapProps) {
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Map className="w-5 h-5 text-primary" />
             <h2 className="font-semibold text-foreground text-lg">Delhi Route Map</h2>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+          <Button variant="ghost" size="icon" onClick={() => { setOpen(false); }}>
             <X className="w-5 h-5" />
           </Button>
         </div>
 
-        {/* Route selection */}
         <div className="flex flex-col sm:flex-row gap-3 p-4 border-b border-border bg-muted/30">
           <div className="flex-1">
             <Select value={start} onValueChange={setStart}>
@@ -157,7 +168,6 @@ export default function RouteMap({ data }: RouteMapProps) {
           </div>
         </div>
 
-        {/* Route info bar */}
         {routeStats && (
           <div className="flex gap-4 px-4 py-2 bg-primary/5 border-b border-border text-sm">
             <span className="text-foreground font-medium">{routeStats.distance} km</span>
@@ -168,37 +178,7 @@ export default function RouteMap({ data }: RouteMapProps) {
           </div>
         )}
 
-        {/* Map */}
-        <div className="flex-1 min-h-[400px]">
-          <MapContainer
-            center={DELHI_CENTER}
-            zoom={11}
-            style={{ height: "100%", width: "100%" }}
-            scrollWheelZoom={true}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <FitBounds start={startCoord} end={endCoord} />
-            {startCoord && (
-              <Marker position={startCoord} icon={startIcon}>
-                <Popup>{start}</Popup>
-              </Marker>
-            )}
-            {endCoord && (
-              <Marker position={endCoord} icon={endIcon}>
-                <Popup>{end}</Popup>
-              </Marker>
-            )}
-            {startCoord && endCoord && (
-              <Polyline
-                positions={[startCoord, endCoord]}
-                pathOptions={{ color: "hsl(220, 90%, 56%)", weight: 4, dashArray: "10, 6" }}
-              />
-            )}
-          </MapContainer>
-        </div>
+        <div className="flex-1 min-h-[400px]" ref={mapContainerRef} />
       </div>
     </div>
   );
