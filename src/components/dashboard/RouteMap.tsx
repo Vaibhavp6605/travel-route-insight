@@ -103,9 +103,32 @@ export default function RouteMap({ data }: RouteMapProps) {
       markersRef.current.push(m);
     }
     if (startCoord && endCoord) {
-      const line = L.polyline([startCoord, endCoord], { color: "#3b82f6", weight: 4, dashArray: "10, 6" }).addTo(map);
-      markersRef.current.push(line);
-      map.fitBounds(L.latLngBounds([startCoord, endCoord]), { padding: [50, 50] });
+      // Fetch real road route from OSRM
+      const url = `https://router.project-osrm.org/route/v1/driving/${startCoord[1]},${startCoord[0]};${endCoord[1]},${endCoord[0]}?overview=full&geometries=geojson`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (!mapRef.current) return;
+          if (data.routes && data.routes.length > 0) {
+            const coords: [number, number][] = data.routes[0].geometry.coordinates.map(
+              (c: [number, number]) => [c[1], c[0]] as [number, number]
+            );
+            const line = L.polyline(coords, { color: "#3b82f6", weight: 5, opacity: 0.8 }).addTo(map);
+            markersRef.current.push(line);
+            map.fitBounds(line.getBounds(), { padding: [50, 50] });
+          } else {
+            // Fallback to straight line
+            const line = L.polyline([startCoord, endCoord], { color: "#3b82f6", weight: 4, dashArray: "10, 6" }).addTo(map);
+            markersRef.current.push(line);
+            map.fitBounds(L.latLngBounds([startCoord, endCoord]), { padding: [50, 50] });
+          }
+        })
+        .catch(() => {
+          if (!mapRef.current) return;
+          const line = L.polyline([startCoord, endCoord], { color: "#3b82f6", weight: 4, dashArray: "10, 6" }).addTo(map);
+          markersRef.current.push(line);
+          map.fitBounds(L.latLngBounds([startCoord, endCoord]), { padding: [50, 50] });
+        });
     } else if (startCoord) {
       map.setView(startCoord, 13);
     } else if (endCoord) {
