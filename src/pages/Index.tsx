@@ -8,6 +8,7 @@ import InsightCharts from "@/components/dashboard/InsightCharts";
 import DataTable from "@/components/dashboard/DataTable";
 import PredictionModule from "@/components/dashboard/PredictionModule";
 import AiInsights from "@/components/dashboard/AiInsights";
+import NearbyAmenities from "@/components/dashboard/NearbyAmenities";
 import RouteMap from "@/components/dashboard/RouteMap";
 import { Loader2 } from "lucide-react";
 
@@ -71,6 +72,8 @@ const Index = () => {
           </div>
 
           <DataTable data={filtered} />
+
+          <NearbyAmenities data={allData} />
         </div>
       </div>
 
