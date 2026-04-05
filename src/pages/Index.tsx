@@ -72,6 +72,8 @@ const Index = () => {
           </div>
 
           <DataTable data={filtered} />
+
+          <NearbyAmenities data={allData} />
         </div>
       </div>
 
