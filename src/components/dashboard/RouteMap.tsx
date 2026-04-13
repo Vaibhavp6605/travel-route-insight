@@ -103,46 +103,57 @@ export default function RouteMap({ data }: RouteMapProps) {
       markersRef.current.push(m);
     }
     if (startCoord && endCoord) {
+      const drawFallback = () => {
+        if (!mapRef.current) return;
+        const line = L.polyline([startCoord, endCoord], { color: "#3b82f6", weight: 4, dashArray: "10, 6" }).addTo(map);
+        markersRef.current.push(line);
+        map.fitBounds(L.latLngBounds([startCoord, endCoord]), { padding: [50, 50] });
+      };
+
       // Fetch real road route from OSRM
       const url = `https://router.project-osrm.org/route/v1/driving/${startCoord[1]},${startCoord[0]};${endCoord[1]},${endCoord[0]}?overview=full&geometries=geojson&alternatives=true`;
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
+      
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      
+      fetch(url, { signal: controller.signal })
+        .then(res => {
+          clearTimeout(timeout);
+          if (!res.ok) throw new Error(`OSRM responded ${res.status}`);
+          return res.json();
+        })
+        .then(routeData => {
           if (!mapRef.current) return;
-          if (data.routes && data.routes.length > 0) {
+          if (routeData.routes && routeData.routes.length > 0) {
             // Draw alternate routes first (behind primary)
-            for (let i = data.routes.length - 1; i >= 1; i--) {
-              const altCoords: [number, number][] = data.routes[i].geometry.coordinates.map(
+            for (let i = routeData.routes.length - 1; i >= 1; i--) {
+              const altCoords: [number, number][] = routeData.routes[i].geometry.coordinates.map(
                 (c: [number, number]) => [c[1], c[0]] as [number, number]
               );
-              const altDuration = Math.round(data.routes[i].duration / 60);
-              const altDist = Math.round(data.routes[i].distance / 100) / 10;
+              const altDuration = Math.round(routeData.routes[i].duration / 60);
+              const altDist = Math.round(routeData.routes[i].distance / 100) / 10;
               const altLine = L.polyline(altCoords, { color: "#94a3b8", weight: 5, opacity: 0.6, dashArray: "8, 8" }).addTo(map);
               altLine.bindPopup(`<b>Alternate Route</b><br/>${altDist} km · ~${altDuration} min`);
               markersRef.current.push(altLine);
             }
             // Draw primary route on top
-            const coords: [number, number][] = data.routes[0].geometry.coordinates.map(
+            const coords: [number, number][] = routeData.routes[0].geometry.coordinates.map(
               (c: [number, number]) => [c[1], c[0]] as [number, number]
             );
-            const primaryDuration = Math.round(data.routes[0].duration / 60);
-            const primaryDist = Math.round(data.routes[0].distance / 100) / 10;
+            const primaryDuration = Math.round(routeData.routes[0].duration / 60);
+            const primaryDist = Math.round(routeData.routes[0].distance / 100) / 10;
             const line = L.polyline(coords, { color: "#3b82f6", weight: 6, opacity: 0.9 }).addTo(map);
             line.bindPopup(`<b>Primary Route</b><br/>${primaryDist} km · ~${primaryDuration} min`);
             markersRef.current.push(line);
             map.fitBounds(line.getBounds(), { padding: [50, 50] });
           } else {
-            // Fallback to straight line
-            const line = L.polyline([startCoord, endCoord], { color: "#3b82f6", weight: 4, dashArray: "10, 6" }).addTo(map);
-            markersRef.current.push(line);
-            map.fitBounds(L.latLngBounds([startCoord, endCoord]), { padding: [50, 50] });
+            drawFallback();
           }
         })
-        .catch(() => {
-          if (!mapRef.current) return;
-          const line = L.polyline([startCoord, endCoord], { color: "#3b82f6", weight: 4, dashArray: "10, 6" }).addTo(map);
-          markersRef.current.push(line);
-          map.fitBounds(L.latLngBounds([startCoord, endCoord]), { padding: [50, 50] });
+        .catch((err) => {
+          clearTimeout(timeout);
+          console.warn("[RouteMap] OSRM fetch failed, using fallback:", err.message);
+          drawFallback();
         });
     } else if (startCoord) {
       map.setView(startCoord, 13);
