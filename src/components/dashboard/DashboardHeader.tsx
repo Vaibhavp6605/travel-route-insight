@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardHeader() {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light") return false;
+    return true; // default to dark
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
