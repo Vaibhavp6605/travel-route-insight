@@ -45,11 +45,23 @@ async function fetchPage(offset: number, pageSize: number, retries = 3): Promise
 
 async function fetchData(): Promise<RouteRecord[]> {
   const pageSize = 100;
-  const maxRows = 1000;
-  const offsets = Array.from({ length: maxRows / pageSize }, (_, i) => i * pageSize);
-  const pages = await Promise.all(offsets.map((offset) => fetchPage(offset, pageSize)));
-  const result = pages.flat().slice(0, maxRows);
-  console.log(`[RouteData] Loaded ${result.length} rows from ${offsets.length} pages`);
+  const hardCap = 100000; // safety upper bound
+  const batchSize = 10; // fetch 10 pages (1000 rows) in parallel per batch
+  const all: RouteRecord[] = [];
+  let offset = 0;
+  let done = false;
+
+  while (!done && all.length < hardCap) {
+    const offsets = Array.from({ length: batchSize }, (_, i) => offset + i * pageSize);
+    const pages = await Promise.all(offsets.map((o) => fetchPage(o, pageSize)));
+    for (const p of pages) all.push(...p);
+    // If any page returned fewer than pageSize, we've hit the end
+    if (pages.some((p) => p.length < pageSize)) done = true;
+    offset += batchSize * pageSize;
+  }
+
+  const result = all.slice(0, hardCap);
+  console.log(`[RouteData] Loaded ${result.length} rows`);
   return result;
 }
 
